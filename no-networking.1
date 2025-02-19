@@ -1,0 +1,126 @@
+.TH NO-NETWORKING 1 "%DATE%" "v%VERSION%"
+.SH NAME
+no-networking \- Limit network connections a process can make.
+.SH SYNOPSIS
+.B
+no-networking
+[\c
+.B
+\-lnp\fP\c
+]
+COMMAND [ARGUMENT]...
+.SH DESCRIPTION
+.B no-networking
+is used to prevent processes from making certain network connections. The
+wrapped process is launched with one of three supplementary groups whose
+restrictions are dictated by iptables rules.
+.SH OPTIONS
+.PP
+Option parsing stops at the first non-option argument, so in the common case,
+"\-\-" is not needed between no-networking's options and the command to be
+executed.
+.TP
+.B \-h, \-V, \--help
+Show command usage and exit.
+.TP
+.B \-l
+Allow connections to loopback addresses 127.0.0.0/8 and ::1.
+.TP
+.B \-n
+Forbid all connections. This is the default behavior, but this option can be
+used to override previously specified flags.
+.TP
+.B \-p
+Allow connections to private addresses — loopback addresses, 10.0.0.0/8,
+169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 198.18.0.0/15, fc00::/7 and
+fe80::/10.
+.PP
+If
+.B
+no-networking
+invocations are nested, the most restrictive rules take precedence.
+.SH EXAMPLES
+By default, a command wrapped with \fBno-networking\fR will not be able to make
+any outgoing connections:
+
+.RS
+$ no-networking ping google.com
+.br
+ping: google.com: Temporary failure in name resolution
+.br
+(2)
+.RE
+
+The "-l" flag restricts network access to loopback addresses:
+
+.RS
+$ no-networking -l ping google.com
+.br
+ping: google.com: Temporary failure in name resolution
+.br
+(2)
+
+$ no-networking -l ping 127.0.0.1
+.br
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+.br
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.041 ms
+.br
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.052 ms
+.br
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.054 ms
+.br
+\&...
+.RE
+
+The "-p" flag restricts network access to loopback addresses and other private
+addresses i.e. RFC-1918 private use networks, RFC-3927 link local addresses and
+RFC-4193 unique local addresses:
+
+.RS
+$ no-networking -p ping google.com
+.br
+PING google.com (142.250.191.78) 56(84) bytes of data.
+.br
+^C
+.br
+--- google.com ping statistics ---
+.br
+2 packets transmitted, 0 received, 100% packet loss, time 1020ms
+.br
+(1)
+
+$ no-networking -p ping 10.0.0.1
+.br
+PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
+.br
+64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=0.410 ms
+.br
+64 bytes from 10.0.0.1: icmp_seq=2 ttl=64 time=0.314 ms
+.br
+64 bytes from 10.0.0.1: icmp_seq=3 ttl=64 time=0.324 ms
+.br
+^C
+.br
+--- 10.0.0.1 ping statistics ---
+.br
+3 packets transmitted, 3 received, 0% packet loss, time 2051ms
+.br
+rtt min/avg/max/mdev = 0.314/0.349/0.410/0.043 ms
+.RE
+
+The "-n" flag can be used to explicitly disable all network connections if, for
+example, another flag was specified earlier in the argument list:
+
+.RS
+$ no-networking -l -n ping 127.0.0.1
+.br
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+.br
+^C
+.br
+--- 127.0.0.1 ping statistics ---
+.br
+3 packets transmitted, 0 received, 100% packet loss, time 2048ms
+.br
+(1)
