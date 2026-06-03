@@ -1,5 +1,5 @@
 Architecture: (Automatically Populated)
-Pre-Depends: adduser, libc-bin, iptables
+Pre-Depends: adduser, libc-bin, iptables, netfilter-persistent
 Description: Provides a binary that can be used to launch executables with
  limited or completely disabled network access.
 Maintainer: Eric Pruitt
