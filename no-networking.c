@@ -30,7 +30,7 @@ typedef enum {
     /**
      * Allow connections to loopback addresses.
      */
-    RESTRICTION_LOOPBKACK_NETWORKING,
+    RESTRICTION_LOOPBACK_NETWORKING,
     /**
      * Allow connections to private addresses.
      */
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     const char *program = argc ? basename(argv[0]) : "no-networking";
     const char *restriction_groups[] = {
         [RESTRICTION_NO_NETWORKING] = NO_NETWORKING_GROUP,
-        [RESTRICTION_LOOPBKACK_NETWORKING] = LOOPBACK_NETWORKING_GROUP,
+        [RESTRICTION_LOOPBACK_NETWORKING] = LOOPBACK_NETWORKING_GROUP,
         [RESTRICTION_PRIVATE_NETWORKING] = PRIVATE_NETWORKING_GROUP,
     };
 
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
             return EXIT_SUCCESS;
 
           case 'l':
-            restriction = RESTRICTION_LOOPBKACK_NETWORKING;
+            restriction = RESTRICTION_LOOPBACK_NETWORKING;
             break;
 
           case 'n':
