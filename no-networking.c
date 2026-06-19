@@ -196,8 +196,15 @@ set_groups:
     }
 
     // Try to guard against failed attempts to drop permissions.
-    assert(getuid() == geteuid());
-    assert(getgid() == getegid());
+    if (getuid() != geteuid()) {
+        fprintf(stderr, "%s: getuid() != geteuid(); aborting\n", program);
+        return EXIT_FAILURE;
+    }
+
+    if (getgid() != getegid()) {
+        fprintf(stderr, "%s: getgid() != getegid(); aborting\n", program);
+        return EXIT_FAILURE;
+    }
 
     execvp(argv[optind], argv + optind);
     fprintf(stderr, "%s: %s: %s\n", program, argv[optind], strerror(errno));
