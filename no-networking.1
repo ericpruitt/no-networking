@@ -6,14 +6,20 @@ no-networking \- Limit network connections a process can make.
 no-networking
 [\c
 .B
-\-lnp\fP\c
+\-dlnp\fP\c
 ]
 COMMAND [ARGUMENT]...
 .SH DESCRIPTION
 .B no-networking
 is used to prevent processes from making certain network connections. The
 wrapped process is launched with one of three supplementary groups whose
-restrictions are dictated by iptables rules.
+restrictions are dictated by iptables rules. By default,
+.B
+no-networking
+will probe various IP addresses using UDP to try to verify that the desired
+networking restrictions are in place before executing the specified command.
+For the sake of simplicity and speed, TCP connections are not tested, but it is
+unlikely for one set of rules to be broken and not the other.
 .SH OPTIONS
 .PP
 Option parsing stops at the first non-option argument, so in the common case,
@@ -22,6 +28,9 @@ executed.
 .TP
 .B \-h, \-V, \--help
 Show command usage and exit.
+.TP
+.B \-d
+Disable UDP connection probing.
 .TP
 .B \-l
 Allow connections to loopback addresses 127.0.0.0/8 and ::1.

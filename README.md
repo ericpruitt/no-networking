@@ -9,9 +9,19 @@ to limit what a process can connect to.
 Usage
 -----
 
+**Synopsis:** `no-networking [-dlnp] COMMAND [ARGUMENT]...`
+
+By default, no-networking will probe various IP addresses using UDP to try to
+verify that the desired networking restrictions are in place before executing
+the specified command. For the sake of simplicity and speed, TCP connections
+are not tested, but it is unlikely for one set of rules to be broken and not
+the other.
+
 ### Options ###
 
-**Synopsis:** `no-networking [-lnp] COMMAND [ARGUMENT]...`
+#### -d ####
+
+Disable UDP connection probing.
 
 #### -l ####
 

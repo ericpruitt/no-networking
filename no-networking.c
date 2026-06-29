@@ -4,12 +4,16 @@
  *
  * - Make: c99 -D_DEFAULT_SOURCE -lc no-networking.c -o no-networking
  */
+#include <arpa/inet.h>
 #include <errno.h>
 #include <grp.h>
 #include <libgen.h>
+#include <netinet/in.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -36,16 +40,196 @@ typedef enum {
     ALLOW_PRIVATE_NETWORKS,
 } allow_mode_et;
 
-static void usage(const char *program)
+/**
+ * Destination port used for connection probing packets. The port is mostly
+ * arbitrary, but 53 was selected since DNS is rarely restricted by firewalls.
+ */
+#define REMOTE_PROBE_PORT 53
+
+/**
+ * These IP addresses are probed via UDP to help verify that the desired
+ * network restrictions are active.
+ */
+const char **probe_dests[] = {
+    [ALLOW_NONE] = (const char *[]) {
+        "1.1.1.1",              // Cloudflare IPv4 DNS Server
+        "2606:4700:4700::1111", // Cloudflare IPv6 DNS Server
+        "10.0.0.0",
+        "169.254.0.0",
+        "172.16.0.0",
+        "192.168.0.0",
+        "198.18.0.0",
+        "127.0.0.0",
+        "::1",
+        NULL,
+    },
+    [ALLOW_LOOPBACK] = (const char *[]) {
+        "1.1.1.1",
+        "2606:4700:4700::1111",
+        "10.0.0.0",
+        "169.254.0.0",
+        "172.16.0.0",
+        "192.168.0.0",
+        "198.18.0.0",
+        NULL,
+    },
+    [ALLOW_PRIVATE_NETWORKS] = (const char *[]) {
+        "1.1.1.1",
+        "2606:4700:4700::1111",
+        NULL,
+    },
+};
+
+char *argv0 = "no-networking";
+allow_mode_et mode = ALLOW_NONE;
+
+/**
+ * Like _printf(3)_, but prints to standard error instead of standard output.
+ *
+ * Arguments: See _printf(3)_.
+ *
+ * Return: See _printf(3)_.
+ */
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+/**
+ * Probe various IPv4 addresses to try to verify that the desired network
+ * restrictions are in place.
+ *
+ * Return: 0 if the system is not configured for IPv4 or there were no
+ * anomalies discovered by the probing process. Otherwise, -1 is returned.
+ */
+static int probe_ipv4()
 {
-    printf("Usage: %s [-lnp] COMMAND [ARGUMENT]...\n", program);
-    printf("       %s -h\n", program);
-    printf("       %s -V\n", program);
-    printf("       %s --help\n", program);
+    int sockfd;
+    struct sockaddr_in dest;
+
+    int result = 0;
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        if (errno == EAFNOSUPPORT) {
+            return 0;
+        }
+
+        perror("IPv4 UDP socket creation failed");
+        return -1;
+    }
+
+    // We set the TTL to 1 to try to minimize information leakage when probing
+    // a public address.
+    int ttl = 1;
+
+    if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) == -1) {
+        perror("unable to set TTL for IPv4 UDP socket");
+        return -1;
+    }
+
+    memset(&dest, 0, sizeof(dest));
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons(REMOTE_PROBE_PORT);
+
+    for (const char **cursor = probe_dests[mode]; *cursor; cursor++) {
+        // Ignore IPv6 addresses.
+        if (strchr(*cursor, ':')) {
+            continue;
+        }
+
+        dest.sin_addr.s_addr = inet_addr(*cursor);
+        ssize_t sent = sendto(
+           sockfd, NULL, 0, 0, (const struct sockaddr *) &dest, sizeof(dest)
+        );
+
+        if (sent != -1) {
+            eprintf("%s: probing %s unexpectedly succeeded\n", argv0, *cursor);
+            result = -1;
+        }
+    }
+
+    close(sockfd);
+    return result;
+}
+
+/**
+ * Probe various IPv6 addresses to try to verify that the desired network
+ * restrictions are in place.
+ *
+ * Return: 0 if the system is not configured for IPv6 or there were no
+ * anomalies discovered by the probing process. Otherwise, -1 is returned.
+ */
+static int probe_ipv6()
+{
+    const char *host;
+    int sockfd;
+    struct sockaddr_in6 dest;
+
+    int result = 0;
+    char buf[64] = "::ffff:";
+    char *eob = buf + strlen(buf);
+
+    if ((sockfd = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+        if (errno == EAFNOSUPPORT) {
+            return 0;
+        }
+
+        perror("IPv6 UDP socket creation failed");
+        return -1;
+    }
+
+    // We set the TTL to 1 to try to minimize information leakage when probing
+    // a public address.
+    int ttl = 1;
+
+    if (
+      setsockopt(sockfd, IPPROTO_IPV6, IPV6_UNICAST_HOPS, &ttl, sizeof(ttl))) {
+        perror("unable to set TTL for IPv6 UDP socket");
+        close(sockfd);
+        return -1;
+    }
+
+    memset(&dest, 0, sizeof(dest));
+    dest.sin6_family = AF_INET6;
+    dest.sin6_port = htons(REMOTE_PROBE_PORT);
+
+    for (const char **cursor = probe_dests[mode]; *cursor; cursor++) {
+        // If the address is an IPv4 address, we need to map it to IPv6.
+        if (strchr(*cursor, ':')) {
+            host = *cursor;
+        } else {
+            strcpy(eob, *cursor);
+            host = (const char *) buf;
+        }
+
+        if (inet_pton(AF_INET6, host, &dest.sin6_addr) <= 0) {
+            perror(*cursor);
+            result = -1;
+            continue;
+        }
+
+        ssize_t sent = sendto(
+            sockfd, NULL, 0, 0, (const struct sockaddr *) &dest, sizeof(dest)
+        );
+
+        if (sent != -1) {
+            eprintf("%s: probing %s unexpectedly succeeded\n", argv0, host);
+            result = -1;
+        }
+    }
+
+    close(sockfd);
+    return result;
+}
+
+static void usage()
+{
+    printf("Usage: %s [-dlnp] COMMAND [ARGUMENT]...\n", argv0);
+    printf("       %s -h\n", argv0);
+    printf("       %s -V\n", argv0);
+    printf("       %s --help\n", argv0);
     printf("\n");
     printf("Options:\n");
     printf("  -h, -V, --help\n");
     printf("        Show this documentation and exit.\n");
+    printf("  -d    Disable UDP connection probing.\n");
     printf("  -l    Allow connections to loopback addresses.\n");
     printf("  -n    Forbid all connections. This is the default behavior.\n");
     printf("  -p    Allow connections to private addresses.\n");
@@ -66,31 +250,38 @@ int main(int argc, char **argv)
     uid_t euid = geteuid();
     uid_t uid = getuid();
 
-    allow_mode_et mode = ALLOW_NONE;
+    bool udp_probing_enabled = true;
 
-    const char *program = argc ? basename(argv[0]) : "no-networking";
     const char *restriction_groups[] = {
         [ALLOW_NONE] = NO_NETWORKING_GROUP,
         [ALLOW_LOOPBACK] = LOOPBACK_NETWORKING_GROUP,
         [ALLOW_PRIVATE_NETWORKS] = PRIVATE_NETWORKING_GROUP,
     };
 
+    if (argc > 0) {
+        argv0 = basename(argv[0]);
+    }
+
     if (argc > 1) {
         for (char **arg = argv; *arg; arg++) {
             if (strcmp(*arg, "--") == 0) {
                 break;
             } else if (strcmp(*arg, "--help") == 0) {
-                usage(program);
+                usage();
                 return EXIT_SUCCESS;
             }
         }
     }
 
-    while ((option = getopt(argc, argv, "+hlnpV")) != -1) {
+    while ((option = getopt(argc, argv, "+dhlnpV")) != -1) {
         switch (option) {
+          case 'd':
+            udp_probing_enabled = false;
+            break;
+
           case 'h':
           case 'V':
-            usage(program);
+            usage();
             return EXIT_SUCCESS;
 
           case 'l':
@@ -111,7 +302,7 @@ int main(int argc, char **argv)
     }
 
     if (!*(argv + optind)) {
-        fprintf(stderr, "%s: no command specified to execute\n", program);
+        eprintf("%s: no command specified to execute\n", argv0);
         return EXIT_FAILURE;
     }
 
@@ -120,7 +311,7 @@ int main(int argc, char **argv)
 
     if (!(group_fields = getgrnam(group))) {
         if (errno == 0) {
-            fprintf(stderr, "%s: %s: group does not exist\n", program, group);
+            eprintf("%s: %s: group does not exist\n", argv0, group);
         } else {
             perror("getgrnam");
         }
@@ -171,7 +362,7 @@ int main(int argc, char **argv)
     }
 
     if (group_count >= sc_ngroups_max) {
-        fprintf(stderr, "%s: maximum number of groups reached\n", program);
+        eprintf("%s: maximum number of groups reached\n", argv0);
         return EXIT_FAILURE;
     } else {
         groups[group_count++] = group_fields->gr_gid;
@@ -196,16 +387,22 @@ set_groups:
 
     // Try to guard against failed attempts to drop permissions.
     if (getuid() != geteuid()) {
-        fprintf(stderr, "%s: getuid() != geteuid(); aborting\n", program);
+        eprintf("%s: getuid() != geteuid(); aborting\n", argv0);
         return EXIT_FAILURE;
     }
 
     if (getgid() != getegid()) {
-        fprintf(stderr, "%s: getgid() != getegid(); aborting\n", program);
+        eprintf("%s: getgid() != getegid(); aborting\n", argv0);
+        return EXIT_FAILURE;
+    }
+
+    // We use "|" instead of "||" here because we want all probing failures to
+    // be reported.
+    if (udp_probing_enabled && (probe_ipv4() | probe_ipv6())) {
         return EXIT_FAILURE;
     }
 
     execvp(argv[optind], argv + optind);
-    fprintf(stderr, "%s: %s: %s\n", program, argv[optind], strerror(errno));
+    eprintf("%s: %s: %s\n", argv0, argv[optind], strerror(errno));
     return errno == ENOENT ? EXIT_COMMAND_NOT_FOUND : EXIT_EXEC_FAILURE;
 }
