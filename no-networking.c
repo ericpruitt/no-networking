@@ -26,16 +26,16 @@ typedef enum {
     /**
      * Block all network access.
      */
-    RESTRICTION_NO_NETWORKING,
+    ALLOW_NONE,
     /**
      * Allow connections to loopback addresses.
      */
-    RESTRICTION_LOOPBACK_NETWORKING,
+    ALLOW_LOOPBACK,
     /**
      * Allow connections to private addresses.
      */
-    RESTRICTION_PRIVATE_NETWORKING,
-} restriction_et;
+    ALLOW_PRIVATE_NETWORKS,
+} allow_mode_et;
 
 static void usage(const char *program)
 {
@@ -67,13 +67,13 @@ int main(int argc, char **argv)
     uid_t euid = geteuid();
     uid_t uid = getuid();
 
-    restriction_et restriction = RESTRICTION_NO_NETWORKING;
+    allow_mode_et mode = ALLOW_NONE;
 
     const char *program = argc ? basename(argv[0]) : "no-networking";
     const char *restriction_groups[] = {
-        [RESTRICTION_NO_NETWORKING] = NO_NETWORKING_GROUP,
-        [RESTRICTION_LOOPBACK_NETWORKING] = LOOPBACK_NETWORKING_GROUP,
-        [RESTRICTION_PRIVATE_NETWORKING] = PRIVATE_NETWORKING_GROUP,
+        [ALLOW_NONE] = NO_NETWORKING_GROUP,
+        [ALLOW_LOOPBACK] = LOOPBACK_NETWORKING_GROUP,
+        [ALLOW_PRIVATE_NETWORKS] = PRIVATE_NETWORKING_GROUP,
     };
 
     if (argc > 1) {
@@ -95,15 +95,15 @@ int main(int argc, char **argv)
             return EXIT_SUCCESS;
 
           case 'l':
-            restriction = RESTRICTION_LOOPBACK_NETWORKING;
+            mode = ALLOW_LOOPBACK;
             break;
 
           case 'n':
-            restriction = RESTRICTION_NO_NETWORKING;
+            mode = ALLOW_NONE;
             break;
 
           case 'p':
-            restriction = RESTRICTION_PRIVATE_NETWORKING;
+            mode = ALLOW_PRIVATE_NETWORKS;
             break;
 
           default:
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    group = restriction_groups[restriction];
+    group = restriction_groups[mode];
     errno = 0;
 
     if (!(group_fields = getgrnam(group))) {
