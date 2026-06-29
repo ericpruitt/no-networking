@@ -121,6 +121,7 @@ static int probe_ipv4()
 
     if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) == -1) {
         perror("unable to set TTL for IPv4 UDP socket");
+        close(sockfd);
         return -1;
     }
 
