@@ -30,7 +30,7 @@ fe80::/10.
 
 ### Groups ###
 
-There are through groups the tool manages:
+There are three groups the tool manages:
 
 - **no-networking:** Members of this group cannot make any network connections.
 - **loopback-networking:** Members of this group can make connections to
