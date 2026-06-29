@@ -4,7 +4,6 @@
  *
  * - Make: c99 -D_DEFAULT_SOURCE -lc no-networking.c -o no-networking
  */
-#include <assert.h>
 #include <errno.h>
 #include <grp.h>
 #include <libgen.h>
