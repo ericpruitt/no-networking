@@ -80,7 +80,14 @@ const char **probe_dests[] = {
     },
 };
 
+/**
+ * Basename of the command.
+ */
 char *argv0 = "no-networking";
+
+/**
+ * Mode of operation.
+ */
 allow_mode_et mode = ALLOW_NONE;
 
 /**
@@ -220,6 +227,9 @@ static int probe_ipv6(void)
     return result;
 }
 
+/**
+ * Print program usage information.
+ */
 static void usage(void)
 {
     printf("Usage: %s [-dlnp] COMMAND [ARGUMENT]...\n", argv0);
