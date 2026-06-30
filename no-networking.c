@@ -172,7 +172,7 @@ static int probe_ipv6(void)
 
     int result = 0;
     char buf[64] = "::ffff:";
-    char *eob = buf + strlen(buf);
+    char *end_of_prefix = buf + strlen(buf);
 
     if ((sockfd = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
         if (errno == EAFNOSUPPORT) {
@@ -199,11 +199,13 @@ static int probe_ipv6(void)
     dest.sin6_port = htons(REMOTE_PROBE_PORT);
 
     for (const char **cursor = probe_dests[mode]; *cursor; cursor++) {
-        // If the address is an IPv4 address, we need to map it to IPv6.
         if (strchr(*cursor, ':')) {
+            // Address is IPv6 native, so we can use it as-is.
             host = *cursor;
         } else {
-            strcpy(eob, *cursor);
+            // If the address is an IPv4 address, we need to generate an
+            // IPv6-mapped address.
+            strcpy(end_of_prefix, *cursor);  // ::ffff:... -> ::ffff:A.B.C.D
             host = (const char *) buf;
         }
 
