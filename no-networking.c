@@ -52,8 +52,8 @@ typedef enum {
  */
 const char **probe_dests[] = {
     [ALLOW_NONE] = (const char *[]) {
-        "1.1.1.1",              // Cloudflare IPv4 DNS Server
-        "2606:4700:4700::1111", // Cloudflare IPv6 DNS Server
+        "198.41.0.4",           // a.root-servers.net (IPv4)
+        "2001:503:ba3e::2:30",  // a.root-servers.net (IPv6)
         "10.0.0.0",
         "169.254.0.0",
         "172.16.0.0",
@@ -64,8 +64,8 @@ const char **probe_dests[] = {
         NULL,
     },
     [ALLOW_LOOPBACK] = (const char *[]) {
-        "1.1.1.1",
-        "2606:4700:4700::1111",
+        "198.41.0.4",
+        "2001:503:ba3e::2:30",
         "10.0.0.0",
         "169.254.0.0",
         "172.16.0.0",
@@ -74,8 +74,8 @@ const char **probe_dests[] = {
         NULL,
     },
     [ALLOW_PRIVATE_NETWORKS] = (const char *[]) {
-        "1.1.1.1",
-        "2606:4700:4700::1111",
+        "198.41.0.4",
+        "2001:503:ba3e::2:30",
         NULL,
     },
 };
