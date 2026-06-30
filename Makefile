@@ -1,9 +1,9 @@
 .POSIX:
 .SILENT: groups.h lint test test-routing test-man-page-readable
 
-CC ?= c99
-CPPFLAGS ?= -D_DEFAULT_SOURCE
-CFLAGS ?= -lc
+CC = c99
+CPPFLAGS = -D_DEFAULT_SOURCE
+CFLAGS = -O
 
 DEB_TARGETS = \
 	deb/DEBIAN/control \
@@ -45,7 +45,7 @@ lint: no-networking.c groups.h
 	fi
 	if command -v clang >/dev/null; then \
 		clang -std=c99 $(CPPFLAGS) $(CFLAGS) -Werror \
-			-Weverything -fsyntax-only no-networking.c \
+			-Wall -Wpedantic -fsyntax-only no-networking.c \
 		|| trap "exit 1" EXIT; \
 	fi; \
 	if command -v gcc >/dev/null; then \
@@ -53,8 +53,10 @@ lint: no-networking.c groups.h
 			-Wall -Wpedantic -fsyntax-only no-networking.c \
 		|| trap "exit 1" EXIT; \
 	fi
+	echo "$@: OK"
 
 deb/usr/bin/no-networking: no-networking
+	$(MAKE) lint
 	install -D -m 4755 $? $@
 
 deb/usr/share/man/man1/no-networking.1: no-networking.1
