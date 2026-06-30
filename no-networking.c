@@ -99,7 +99,7 @@ allow_mode_et mode = ALLOW_NONE;
  * Return: 0 if the system is not configured for IPv4 or there were no
  * anomalies discovered by the probing process. Otherwise, -1 is returned.
  */
-static int probe_ipv4()
+static int probe_ipv4(void)
 {
     int sockfd;
     struct sockaddr_in dest;
@@ -157,7 +157,7 @@ static int probe_ipv4()
  * Return: 0 if the system is not configured for IPv6 or there were no
  * anomalies discovered by the probing process. Otherwise, -1 is returned.
  */
-static int probe_ipv6()
+static int probe_ipv6(void)
 {
     const char *host;
     int sockfd;
@@ -220,7 +220,7 @@ static int probe_ipv6()
     return result;
 }
 
-static void usage()
+static void usage(void)
 {
     printf("Usage: %s [-dlnp] COMMAND [ARGUMENT]...\n", argv0);
     printf("       %s -h\n", argv0);
