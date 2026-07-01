@@ -19,6 +19,10 @@ the other.
 
 ### Options ###
 
+#### -h, -V, --help ####
+
+Show usage information and exit.
+
 #### -d ####
 
 Disable UDP connection probing.
