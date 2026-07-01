@@ -2,7 +2,7 @@
  * This tool adds supplemental groups to restrict network access of the process
  * it spawns.
  *
- * - Make: c99 -D_DEFAULT_SOURCE -lc no-networking.c -o no-networking
+ * - Make: c99 -D_DEFAULT_SOURCE -O no-networking.c -o no-networking
  */
 #include <arpa/inet.h>
 #include <errno.h>
