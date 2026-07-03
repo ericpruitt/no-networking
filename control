@@ -4,4 +4,4 @@ Description: Provides a binary that can be used to launch executables with
  limited or completely disabled network access.
 Maintainer: Eric Pruitt
 Package: no-networking
-Version: 1.1.1
+Version: 1.1.2

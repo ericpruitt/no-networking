@@ -54,6 +54,8 @@ const char **probe_dests[] = {
     [ALLOW_NONE] = (const char *[]) {
         "198.41.0.4",           // a.root-servers.net (IPv4)
         "2001:503:ba3e::2:30",  // a.root-servers.net (IPv6)
+        "fc00::",
+        "fe80::",
         "10.0.0.0",
         "169.254.0.0",
         "172.16.0.0",
@@ -66,6 +68,8 @@ const char **probe_dests[] = {
     [ALLOW_LOOPBACK] = (const char *[]) {
         "198.41.0.4",
         "2001:503:ba3e::2:30",
+        "fc00::",
+        "fe80::",
         "10.0.0.0",
         "169.254.0.0",
         "172.16.0.0",
